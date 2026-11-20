@@ -4,6 +4,7 @@
 #include "../include/routing.h"
 #include "../include/ambulance.h"
 #include "../include/hospital.h"
+#include "../include/records.h"
 #include "../include/workbench.h"
 
 using namespace std;
@@ -128,10 +129,11 @@ static void findManualRoute()
 
 
 // ============================================================
-// BLOCK OR UNBLOCK A ROAD
+// BLOCK A ROAD
+// After this, Dijkstra ignores the road and finds another route.
 // ============================================================
 
-static void changeRoad(bool block)
+static void blockSelectedRoad()
 {
     int first;
     int second;
@@ -150,31 +152,17 @@ static void changeRoad(bool block)
         return;
     }
 
-    if (block)
+    if (blocked[first][second])
     {
-        if (blocked[first][second])
-        {
-            cout << "\nThis road is already blocked!\n";
-            return;
-        }
-
-        blockRoad(first, second);
-        cout << "\nROAD BLOCKED: " << locationNames[first]
-             << " <X> " << locationNames[second]
-             << "\nDijkstra will now avoid this road.\n";
+        cout << "\nThis road is already blocked!\n";
+        return;
     }
-    else
-    {
-        if (!blocked[first][second])
-        {
-            cout << "\nThis road is already open!\n";
-            return;
-        }
 
-        unblockRoad(first, second);
-        cout << "\nROAD OPENED: " << locationNames[first]
-             << " <-> " << locationNames[second] << "\n";
-    }
+    blockRoad(first, second);
+
+    cout << "\nROAD BLOCKED: " << locationNames[first]
+         << " <X> " << locationNames[second]
+         << "\nDijkstra will now avoid this road.\n";
 }
 
 
@@ -220,9 +208,20 @@ static void reportEmergency()
     emergency.severity = severity;
     emergency.requirement = requirement;
 
+    // Save the emergency in the records (see records.cpp).
+    // It is saved as soon as it is received, even if no ambulance
+    // or hospital can be found later.
+    int emergencyId = addEmergencyRecord(emergency);
+
     cout << "\n================================================\n";
     cout << "              EMERGENCY RECEIVED\n";
     cout << "================================================\n";
+
+    if (emergencyId != -1)
+        cout << "Emergency ID: " << emergencyId << "\n";
+    else
+        cout << "(Record storage is full - this emergency was not saved)\n";
+
     cout << "Location:    " << locationNames[emergency.location] << "\n";
     cout << "Severity:    " << severityName(emergency.severity) << "\n";
     cout << "Requirement: " << requirementName(emergency.requirement) << "\n";
@@ -363,8 +362,8 @@ int main()
         cout << "1. Report Emergency (full dispatch)\n";
         cout << "2. Find Shortest Route\n";
         cout << "3. Block a Road\n";
-        cout << "4. Unblock a Road\n";
-        cout << "5. View Ambulances and Hospitals\n";
+        cout << "4. View Ambulances and Hospitals\n";
+        cout << "5. Emergency Records\n";
         cout << "6. Algorithm Workbench\n";
         cout << "7. Exit\n";
         cout << "\nEnter your choice: ";
@@ -378,9 +377,9 @@ int main()
 
         if (choice == 1)      reportEmergency();
         else if (choice == 2) findManualRoute();
-        else if (choice == 3) changeRoad(true);
-        else if (choice == 4) changeRoad(false);
-        else if (choice == 5) showStatus();
+        else if (choice == 3) blockSelectedRoad();
+        else if (choice == 4) showStatus();
+        else if (choice == 5) recordsMenu();
         else if (choice == 6) runWorkbench();
         else                  cout << "\nExiting system...\n";
     }
